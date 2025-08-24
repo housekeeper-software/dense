@@ -10,10 +10,15 @@ Dropout::Dropout(Context *ctx, const std::string &name, float dropout_ratio)
 
 dense::Tensor Dropout::forward(const dense::Tensor &input) {
   if (!is_training())
-    return input.clone(); //更加安全
+    return input.clone(); // 更加安全
 
-  mask_ = dense::Tensor::empty(input.dtype(), input.sizes());
-  init::uniform_(mask_);
+  auto mask = dense::Tensor::empty(input.dtype(), input.sizes());
+  init::uniform_(mask);
+  return forward_with_mask(input, mask);
+}
+
+Tensor Dropout::forward_with_mask(const Tensor &input, const Tensor &mask) {
+  mask_ = mask;
 
   auto mask_ptr = mask_.mutable_data_as<float>();
 
@@ -31,12 +36,10 @@ dense::Tensor Dropout::forward(const dense::Tensor &input) {
   if (ctx()->device.is_blas()) {
     vec::shdm_blas(input.numel(), in_ptr, mask_ptr, out_ptr);
   } else {
-    vec::shdm_native(input.numel(), in_ptr, mask_ptr, out_ptr);
+    for (size_t i = 0; i < input.numel(); ++i) {
+      out_ptr[i] = in_ptr[i] * mask_ptr[i];
+    }
   }
-  /* 等价
-  for (size_t i = 0; i < input.numel(); ++i) {
-    out_ptr[i] = in_ptr[i] * mask_ptr[i] ;
-  }*/
   return output;
 }
 
@@ -50,12 +53,10 @@ dense::Tensor Dropout::backward(const dense::Tensor &grad_output) {
   if (ctx()->device.is_blas()) {
     vec::shdm_blas(grad_output.numel(), grad_out_ptr, mask_ptr, grad_in_ptr);
   } else {
-    vec::shdm_native(grad_output.numel(), grad_out_ptr, mask_ptr, grad_in_ptr);
+    for (size_t i = 0; i < grad_output.numel(); ++i) {
+      grad_in_ptr[i] = grad_out_ptr[i] * mask_ptr[i];
+    }
   }
-  /* 等价
-  for (size_t i = 0; i < grad_output.numel(); ++i) {
-    grad_in_ptr[i] = grad_out_ptr[i] * mask_ptr[i] ;
-  }*/
   return grad_input;
 }
 } // namespace dense

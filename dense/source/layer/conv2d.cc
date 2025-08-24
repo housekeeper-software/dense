@@ -357,8 +357,6 @@ public:
                             final_h, final_w);
     }
 
-    // std::cout << upsampled_padded_grad_output_.to_string() << std::endl;
-
     // 展开
     im2col(upsampled_padded_grad_output_, kernel_h, kernel_w, 1, 1,
            unflolded_grad_output_);

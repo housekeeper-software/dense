@@ -139,17 +139,15 @@ Tensor Linear::backward(const Tensor &grad_output) {
       vec::sgemv_transpose_blas(M, N, 1.0, grad_out_ptr, N, &ones[0], 1, 1.0,
                                 grad_bp, 1);
     } else {
-      vec::sgemv_transpose_native(M, N, 1.0, grad_out_ptr, N, &ones[0], 1, 1.0,
-                                  grad_bp, 1);
-    }
-    /* 等价于这段代码
-    for (size_t i = 0; i < D; ++i) {
-      float sum = 0.0f;
-      for (size_t j = 0; j < N; ++j) {
-        sum += grad_out_ptr[j * D + i];
+      // 将 grad_output_reshape 按列求和
+      for (int n = 0; n < N; ++n) {
+        float sum = 0.0f;
+        for (int m = 0; m < M; ++m) {
+          sum += grad_out_ptr[m * N + n];
+        }
+        grad_bp[n] += sum;
       }
-      grad_bp[i] += sum;
-    }*/
+    }
   }
 
   // 对 输入 X 的梯度计算

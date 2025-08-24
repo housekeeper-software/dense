@@ -16,6 +16,8 @@ public:
   Tensor forward(const Tensor &input) override;
   Tensor backward(const Tensor &grad_output) override;
 
+  Tensor forward_with_mask(const Tensor &input, const Tensor &mask);
+
 private:
   float dropout_ratio_; // 设置为零的神经元比例（丢弃率）
   float scale_;         // 缩放因子，用于 inverted dropout

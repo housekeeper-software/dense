@@ -18,13 +18,10 @@ dense::Tensor Residual::forward(const dense::Tensor &input) {
   if (ctx()->device.is_blas()) {
     vec::saxpy_blas(shortcut.numel(), 1.0f, shortcut_ptr, 1, out_ptr, 1);
   } else {
-    vec::saxpy_native(shortcut.numel(), 1.0f, shortcut_ptr, 1, out_ptr, 1);
+    for (size_t i = 0; i < shortcut.numel(); ++i) {
+      out_ptr[i] += shortcut_ptr[i];
+    }
   }
-  /* 等价
-  for (size_t i = 0; i < shortcut.numel(); ++i) {
-    out_ptr[i] += shortcut_ptr[i];
-  }
-  */
   return output;
 }
 
@@ -39,12 +36,10 @@ dense::Tensor Residual::backward(const dense::Tensor &grad_output) {
   if (ctx()->device.is_blas()) {
     vec::saxpy_blas(shortcut.numel(), 1.0f, shortcut_ptr, 1, grad_in_ptr, 1);
   } else {
-    vec::saxpy_native(shortcut.numel(), 1.0f, shortcut_ptr, 1, grad_in_ptr, 1);
+    for (size_t i = 0; i < shortcut.numel(); ++i) {
+      grad_in_ptr[i] += shortcut_ptr[i];
+    }
   }
-  /* 等价
-  for (size_t i = 0; i < shortcut.numel(); ++i) {
-    grad_in_ptr[i] += shortcut_ptr[i];
-  }*/
   return grad_input;
 }
 } // namespace dense

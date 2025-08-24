@@ -116,7 +116,7 @@ dense::Tensor LayerNorm::forward_cpu(const dense::Tensor &input) {
       }
     } else {
       // 不需要仿射变换，我们直接将归一化结果输出
-      vec::scopy_native(N, x_norm_bt, 1, out_bt, 1);
+      std::copy_n(x_norm_bt, N, out_bt);
     }
   }
   return output;
