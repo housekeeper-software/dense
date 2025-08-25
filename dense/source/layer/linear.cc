@@ -78,9 +78,11 @@ Tensor Linear::backward(const Tensor &grad_output) {
     // grad_W_ 的形状: [out_features, in_features] (权重梯度矩阵)
     grad_W_ = Tensor::zeros_like(W_);
   }
-  if (!grad_b_.is_defined()) {
-    // grad_b_ 的形状: [out_features] (偏置梯度向量)
-    grad_b_ = Tensor::zeros_like(b_);
+  if (has_bias_) {
+    if (!grad_b_.is_defined()) {
+      // grad_b_ 的形状: [out_features] (偏置梯度向量)
+      grad_b_ = Tensor::zeros_like(b_);
+    }
   }
 
   auto input = input_cache_; // 前向时的输入
