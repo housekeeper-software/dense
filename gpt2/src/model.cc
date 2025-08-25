@@ -93,7 +93,7 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
         std::make_unique<dense::MultiHeadAttention>(
             &ctx_, dense::make_layer_name("h_%d.attn", i), config_.n_heads,
             config_.emb_dim, config_.context_length, config_.qkv_bias,
-            config_.drop_rate, true, cache_.get(i)),
+            config_.drop_rate, cache_.get(i)),
         std::make_unique<dense::Dropout>(
             &ctx_, dense::make_layer_name("h_%d.attn.dropout", i),
             config_.drop_rate));
@@ -116,6 +116,8 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
                                              config_.ln_epsilon, true);
   lm_head_ = std::make_unique<dense::Linear>(&ctx_, "lm_head", config_.emb_dim,
                                              config_.vocab_size, false);
+  // lm_head 于 wte 共享权重
+  lm_head_->W_ = wte_->W_;
 }
 
 GPTModel::~GPTModel() = default;
