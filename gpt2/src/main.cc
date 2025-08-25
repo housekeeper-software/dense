@@ -137,7 +137,7 @@ int training() {
 }
 
 int main() {
-  inference();
-  // training();
+  //inference();
+  training();
   return 0;
 }

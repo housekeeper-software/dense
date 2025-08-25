@@ -128,6 +128,8 @@ dense::Context *GPTModel::ctx() { return &ctx_; }
 void GPTModel::init_for_traning() {
   // 参考 transformers，我们对权重做一些特殊初始化
   for (auto &i : ctx()->param_layers) {
+    i->init();
+
     if (i->type() == "linear") {
       if (i->W_.is_defined()) {
         dense::init::normal_(i->W_, 0.0, config_.initializer_range);
