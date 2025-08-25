@@ -40,6 +40,9 @@ public:
   GPTModel(const ModelConfig &config, bool enable_cache = false);
   ~GPTModel();
 
+  // 如果训练模式，需要调用这个方法初始化权重和偏置
+  void init_for_traning();
+
   dense::Context *ctx();
   void from_pretrained(const std::string &filename);
 

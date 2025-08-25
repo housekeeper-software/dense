@@ -9,6 +9,7 @@
 #include "layer/linear.h"
 #include "layer/residual.h"
 #include "layer/sequential.h"
+#include "math/vec_math.h"
 #include "sampling.h"
 #include <assert.h>
 #include <fstream>
@@ -118,7 +119,13 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
                                              config_.ln_epsilon, true, true);
   lm_head_ = std::make_unique<dense::Linear>(&ctx_, "lm_head", config_.emb_dim,
                                              config_.vocab_size, false);
+}
 
+GPTModel::~GPTModel() = default;
+
+dense::Context *GPTModel::ctx() { return &ctx_; }
+
+void GPTModel::init_for_traning() {
   // 参考 transformers，我们对权重做一些特殊初始化
   for (auto &i : ctx()->param_layers) {
     if (i->type() == "linear") {
@@ -152,10 +159,6 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
   // 模型正确的话，第一次损失应该在 log(50257) = 10.xx
   wte_->W_ = lm_head_->W_;
 }
-
-GPTModel::~GPTModel() = default;
-
-dense::Context *GPTModel::ctx() { return &ctx_; }
 
 void GPTModel::from_pretrained(const std::string &filename) {
   if (!filename.empty()) {
@@ -384,8 +387,12 @@ dense::Tensor GPTModel::forward(const dense::Tensor &input) {
     auto N = tok_emb.numel();
     auto tok_ptr = tok_emb.mutable_data_as<float>();
     auto pos_ptr = pos_emb.const_data_as<float>();
-    for (size_t i = 0; i < N; ++i) {
-      tok_ptr[i] = tok_ptr[i] + pos_ptr[i];
+    if (ctx()->device.is_blas()) {
+      vec::saxpy_blas(N, 1.0f, pos_ptr, 1, tok_ptr, 1);
+    } else {
+      for (size_t i = 0; i < N; ++i) {
+        tok_ptr[i] = tok_ptr[i] + pos_ptr[i];
+      }
     }
   }
   auto x = dropout_->forward(tok_emb);

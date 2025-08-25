@@ -72,7 +72,6 @@ int inference() {
   auto processed_breakers = tokenizer.process_breakers(breakers);
 
   gpt.from_pretrained(model_dir + kModelFile);
-  // gpt.save(save_model_dir + "/gpt2-small.safetensors");
 
   SamplingChain smpl;
   smpl.add(std::make_unique<PenaltiesSampling>(512, 1.1f, 0.05f, 0.0f));
@@ -122,6 +121,7 @@ int training() {
   tokenizer.add_special_tokens({"<|endoftext|>"});
 
   GPTModel model(config, false);
+  model.init_for_traning();
 
   dense::CrossEntropyLoss loss;
   dense::AdamW optimizer(0.0001);
@@ -137,7 +137,7 @@ int training() {
 }
 
 int main() {
-  // inference();
-  training();
+  inference();
+  // training();
   return 0;
 }
