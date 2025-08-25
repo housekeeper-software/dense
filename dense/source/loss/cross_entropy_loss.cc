@@ -1,5 +1,6 @@
 #include "loss/cross_entropy_loss.h"
 #include <cmath>
+#include <iostream>
 #include <stdexcept>
 
 namespace dense {
@@ -70,7 +71,7 @@ double CrossEntropyLoss::forward(const dense::Tensor &input,
     // 如果 target 是整数标签，转换为 one-hot 编码
     // 创建一个全零的张量，作为 one-hot 编码的容器
     auto one_hot = dense::Tensor::zeros_like(input);
-    one_hot = one_hot.reshape({folded_dim, C});
+    auto reshaped_one_hot = one_hot.reshape({folded_dim, C});
     auto reshaped_target = squeezed_target.reshape({folded_dim});
     for (size_t b = 0; b < folded_dim; ++b) {
       int64_t target_class;
@@ -91,7 +92,7 @@ double CrossEntropyLoss::forward(const dense::Tensor &input,
                                  std::to_string(C) + ")");
       }
 
-      auto one_hot_bt = one_hot.mutable_data_as<float>() + b * C;
+      auto one_hot_bt = reshaped_one_hot.mutable_data_as<float>() + b * C;
       one_hot_bt[target_class] = 1.0f;
     }
     cached_one_hot_ = one_hot;

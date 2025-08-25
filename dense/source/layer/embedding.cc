@@ -94,7 +94,7 @@ dense::Tensor Embedding::backward(const dense::Tensor &grad_output) {
 
   auto grad_output_ptr = flat_grad_output.const_data_as<float>();
   auto input_ptr = flat_input.const_data_as<int64_t>();
-  auto grad_W_ptr = grad_W_.mutable_data_as<float>();
+  auto grad_w_ptr = grad_W_.mutable_data_as<float>();
 
   for (size_t i = 0; i < total_elements; ++i) {
     auto idx = input_ptr[i];
@@ -105,7 +105,7 @@ dense::Tensor Embedding::backward(const dense::Tensor &grad_output) {
     }
 
     auto grad_out_ptr = grad_output_ptr + i * embedding_dim_;
-    auto grad_w_idx_ptr = grad_W_ptr + idx * embedding_dim_;
+    auto grad_w_idx_ptr = grad_w_ptr + idx * embedding_dim_;
     // 将梯度累加到嵌入矩阵的这个特征向量上
     if (ctx()->device.is_blas()) {
       vec::saxpy_blas(embedding_dim_, 1.0f, grad_out_ptr, 1, grad_w_idx_ptr, 1);

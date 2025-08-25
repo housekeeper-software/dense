@@ -335,7 +335,7 @@ Tensor Tensor::transpose(int64_t dim0, int64_t dim1) const {
 Tensor Tensor::clone() const {
   auto new_tensor = Tensor(dtype_, shape_);
   new_tensor.allocate();
-  std::memcpy(new_tensor.mutable_data_ptr(), const_data_ptr(), nbytes());
+  std::memcpy(new_tensor.mutable_data_ptr(), const_data_ptr(), new_tensor.nbytes());
   return new_tensor;
 }
 
