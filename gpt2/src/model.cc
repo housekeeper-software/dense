@@ -4,6 +4,7 @@
 #include "layer/dropout.h"
 #include "layer/embedding.h"
 #include "layer/gelu.h"
+#include "layer/init.h"
 #include "layer/layer_norm.h"
 #include "layer/linear.h"
 #include "layer/residual.h"
@@ -17,7 +18,7 @@
 ModelConfig::ModelConfig()
     : vocab_size(50257), context_length(1024), emb_dim(768), n_heads(12),
       n_layers(12), drop_rate(0.1), qkv_bias(true), expansion_ratio(4.0f),
-      ln_epsilon(1e-05) {}
+      ln_epsilon(1e-05), initializer_range(0.02) {}
 ModelConfig::~ModelConfig() = default;
 ModelConfig::ModelConfig(const ModelConfig &) = default;
 ModelConfig &ModelConfig::operator=(const ModelConfig &) = default;
@@ -40,6 +41,7 @@ bool ModelConfig::InitFromFile(const std::string &config_file) {
     n_heads = config_json.at("n_head").get<int64_t>();
     n_layers = config_json.at("n_layer").get<int64_t>();
     drop_rate = config_json.at("attn_pdrop").get<float>();
+    initializer_range = config_json.at("initializer_range").get<float>();
     if (config_json.contains("layer_norm_epsilon")) {
       ln_epsilon = config_json.at("layer_norm_epsilon").get<float>();
     }
@@ -89,7 +91,7 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
         &ctx_, dense::make_layer_name("h_%d.residual_1", i),
         std::make_unique<dense::LayerNorm>(
             &ctx_, dense::make_layer_name("h_%d.ln_1", i), normalized_shape,
-            config_.ln_epsilon, config_.qkv_bias),
+            config_.ln_epsilon, true, config_.qkv_bias),
         std::make_unique<dense::MultiHeadAttention>(
             &ctx_, dense::make_layer_name("h_%d.attn", i), config_.n_heads,
             config_.emb_dim, config_.context_length, config_.qkv_bias,
@@ -102,7 +104,7 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
         &ctx_, dense::make_layer_name("h_%d.residual_2", i),
         std::make_unique<dense::LayerNorm>(
             &ctx_, dense::make_layer_name("h_%d.ln_2", i), normalized_shape,
-            config_.ln_epsilon, config_.qkv_bias),
+            config_.ln_epsilon, true, config_.qkv_bias),
         std::move(mlp));
 
     auto block = dense::MakeLayerHelper<dense::Sequential>(
@@ -113,11 +115,42 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
   }
 
   ln_f_ = std::make_unique<dense::LayerNorm>(&ctx_, "ln_f", normalized_shape,
-                                             config_.ln_epsilon, true);
+                                             config_.ln_epsilon, true, true);
   lm_head_ = std::make_unique<dense::Linear>(&ctx_, "lm_head", config_.emb_dim,
                                              config_.vocab_size, false);
-  // lm_head 于 wte 共享权重
-  lm_head_->W_ = wte_->W_;
+
+  // 参考 transformers，我们对权重做一些特殊初始化
+  for (auto &i : ctx()->param_layers) {
+    if (i->type() == "linear") {
+      if (i->W_.is_defined()) {
+        dense::init::normal_(i->W_, 0.0, config_.initializer_range);
+      }
+      if (i->b_.is_defined()) {
+        i->b_.zero_();
+      }
+    } else if (i->type() == "embedding") {
+      if (i->W_.is_defined()) {
+        dense::init::normal_(i->W_, 0.0f, config_.initializer_range);
+      }
+    }
+  }
+
+  for (auto &i : ctx()->param_layers) {
+    const auto name = i->name();
+    if (name.length() >= 6 && name.substr(name.length() - 6) == "c_proj") {
+      if (i->W_.is_defined()) {
+        dense::init::normal_(i->W_, 0.0,
+                             config_.initializer_range /
+                                 std::sqrt(2 * config_.n_layers));
+      }
+    }
+  }
+
+  // lm_head 与 wte 共享权重
+  // 应该让 WTE 共享 LM_HEAD，因为 LM_HEAD 的权重初始化适合 Linear 层，
+  // 如果反过来，会导致初始损失非常巨大，比如400左右
+  // 模型正确的话，第一次损失应该在 log(50257) = 10.xx
+  wte_->W_ = lm_head_->W_;
 }
 
 GPTModel::~GPTModel() = default;

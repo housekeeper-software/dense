@@ -32,6 +32,7 @@ public:
   bool qkv_bias;
   float expansion_ratio;
   float ln_epsilon;
+  float initializer_range;
 };
 
 class GPTModel {
