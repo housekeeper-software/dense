@@ -69,16 +69,17 @@ MultiHeadAttention::MultiHeadAttention(Context *ctx, const std::string &name,
   in_proj_ =
       std::make_unique<Linear>(ctx, make_layer_name("%s.c_attn", name.c_str()),
                                emb_dim_, 3 * emb_dim_, bias_);
+
+  out_proj_ =
+      std::make_unique<Linear>(ctx, make_layer_name("%s.c_proj", name.c_str()),
+                               emb_dim_, emb_dim_, bias_);
+
   // nn.MultiheadAttention 是这么初始化的
   init::xavier_uniform_(in_proj_->W_);
 
   if (in_proj_->b_.is_defined()) {
     in_proj_->b_.zero_();
   }
-
-  out_proj_ =
-      std::make_unique<Linear>(ctx, make_layer_name("%s.c_proj", name.c_str()),
-                               emb_dim_, emb_dim_, bias_);
 
   if (out_proj_->b_.is_defined()) {
     out_proj_->b_.zero_();

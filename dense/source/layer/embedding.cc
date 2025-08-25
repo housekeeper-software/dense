@@ -12,7 +12,7 @@ Embedding::Embedding(Context *ctx, const std::string &name,
       embedding_dim_(embedding_dim), padding_idx_(padding_idx) {
   // 这层有可学习参数 W_,嵌入权重
   RegisterParam();
-
+  
   std::vector<int64_t> w_shape = {num_embeddings_, embedding_dim_};
 
   if (weight.is_defined()) {

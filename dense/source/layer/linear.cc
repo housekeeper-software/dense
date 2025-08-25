@@ -12,6 +12,7 @@ Linear::Linear(Context *ctx, const std::string &name, int64_t in_features,
       has_bias_(has_bias) {
   // 线性层有可学习参数 W_,b_(if has_bias_=true)
   RegisterParam();
+
   // torch::nn::Linear 的权重形状是 [out_features, in_features]
   // 权重和偏置初始化参考 pytorch nn.Linear
   W_ = Tensor::empty(DType::kFloat32, {out_features_, in_features_});
