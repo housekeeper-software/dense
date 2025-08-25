@@ -22,6 +22,8 @@ public:
 
   const char *type() const override { return "ln"; }
 
+  void init() override;
+
   Tensor forward(const Tensor &input) override;
   Tensor backward(const Tensor &grad_output) override;
 

@@ -15,12 +15,19 @@ public:
 
   const char *type() const override { return "conv2d"; }
 
+  void init() override;
+
   Tensor forward(const Tensor &input) override;
   Tensor backward(const Tensor &grad_output) override;
 
 private:
   class Conv2dHelper;
   class ConvTranspose2dHelper;
+
+  int64_t in_channels_;
+  int64_t out_channels_;
+  int64_t kernel_h_;
+  int64_t kernel_w_;
 
   int64_t stride_h_;
   int64_t stride_w_;

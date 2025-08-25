@@ -30,6 +30,8 @@ public:
   ~MultiHeadAttention() override;
   const char *type() const override { return "mha"; }
 
+  void init() override;
+
   Tensor forward(const Tensor &input) override;
   Tensor backward(const Tensor &grad_output) override;
 

@@ -11,11 +11,12 @@ namespace dense {
 class Embedding : public Layer {
 public:
   Embedding(Context *ctx, const std::string &name, int64_t num_embeddings,
-            int64_t embedding_dim, int64_t padding_idx = -1,
-            const Tensor &weight = Tensor());
+            int64_t embedding_dim, int64_t padding_idx = -1);
   ~Embedding() override = default;
 
   const char *type() const override { return "embedding"; }
+
+  void init() override;
 
   Tensor forward(const Tensor &input) override;
   Tensor backward(const Tensor &grad_output) override;

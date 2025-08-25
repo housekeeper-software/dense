@@ -74,17 +74,6 @@ MultiHeadAttention::MultiHeadAttention(Context *ctx, const std::string &name,
       std::make_unique<Linear>(ctx, make_layer_name("%s.c_proj", name.c_str()),
                                emb_dim_, emb_dim_, bias_);
 
-  // nn.MultiheadAttention 是这么初始化的
-  init::xavier_uniform_(in_proj_->W_);
-
-  if (in_proj_->b_.is_defined()) {
-    in_proj_->b_.zero_();
-  }
-
-  if (out_proj_->b_.is_defined()) {
-    out_proj_->b_.zero_();
-  }
-
   if (use_attn_mask) {
     attn_mask_ =
         Tensor::zeros(DType::kInt8, {context_length_, context_length_});
@@ -103,6 +92,19 @@ MultiHeadAttention::MultiHeadAttention(Context *ctx, const std::string &name,
 }
 
 MultiHeadAttention::~MultiHeadAttention() = default;
+
+void MultiHeadAttention::init() {
+  // nn.MultiheadAttention 是这么初始化的
+  init::xavier_uniform_(in_proj_->W_);
+
+  if (in_proj_->b_.is_defined()) {
+    in_proj_->b_.zero_();
+  }
+
+  if (out_proj_->b_.is_defined()) {
+    out_proj_->b_.zero_();
+  }
+}
 
 dense::Tensor MultiHeadAttention::forward(const dense::Tensor &input) {
   const auto B = input.size(0);

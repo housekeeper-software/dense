@@ -7,27 +7,21 @@ namespace dense {
 
 Embedding::Embedding(Context *ctx, const std::string &name,
                      int64_t num_embeddings, int64_t embedding_dim,
-                     int64_t padding_idx, const Tensor &weight)
+                     int64_t padding_idx)
     : Layer(ctx, name), num_embeddings_(num_embeddings),
       embedding_dim_(embedding_dim), padding_idx_(padding_idx) {
   // 这层有可学习参数 W_,嵌入权重
   RegisterParam();
-  
+}
+
+void Embedding::init() {
   std::vector<int64_t> w_shape = {num_embeddings_, embedding_dim_};
 
-  if (weight.is_defined()) {
-    if (weight.sizes() != w_shape) {
-      throw std::runtime_error(
-          "Shape of weight does not match num_embeddings and embedding_dim");
-    }
-    W_ = weight;
-  } else {
-    W_ = Tensor::empty(DType::kFloat32, w_shape);
-    init::normal_(W_);
-    if (padding_idx_ >= 0) {
-      auto ptr = W_.mutable_data_as<float>() + padding_idx_ * embedding_dim_;
-      std::fill_n(ptr, embedding_dim_, 0.0f);
-    }
+  W_ = Tensor::empty(DType::kFloat32, w_shape);
+  init::normal_(W_);
+  if (padding_idx_ >= 0) {
+    auto ptr = W_.mutable_data_as<float>() + padding_idx_ * embedding_dim_;
+    std::fill_n(ptr, embedding_dim_, 0.0f);
   }
 }
 

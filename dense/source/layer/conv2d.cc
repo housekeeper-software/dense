@@ -496,24 +496,28 @@ Conv2d::Conv2d(Context *ctx, const std::string &name, int64_t in_channels,
                int64_t out_channels, int64_t kernel_h, int64_t kernel_w,
                int64_t stride_h, int64_t stride_w, int64_t pad_h, int64_t pad_w,
                bool has_bias)
-    : Layer(ctx, name), stride_h_(stride_h), stride_w_(stride_w), pad_h_(pad_h),
-      pad_w_(pad_w), has_bias_(has_bias), conv2d_(new Conv2dHelper()),
+    : Layer(ctx, name), in_channels_(in_channels), out_channels_(out_channels),
+      kernel_h_(kernel_h), kernel_w_(kernel_w), stride_h_(stride_h),
+      stride_w_(stride_w), pad_h_(pad_h), pad_w_(pad_w), has_bias_(has_bias),
+      conv2d_(new Conv2dHelper()),
       conv_transpose_2d_(new ConvTranspose2dHelper()) {
   RegisterParam();
+}
 
-  W_ = dense::Tensor::empty(DType::kFloat32,
-                            {out_channels, in_channels, kernel_h, kernel_w});
+Conv2d::~Conv2d() = default;
+
+void Conv2d::init() {
+  W_ = dense::Tensor::empty(
+      DType::kFloat32, {out_channels_, in_channels_, kernel_h_, kernel_w_});
   init::kaiming_normal_(W_, std::sqrt(5));
   if (has_bias_) {
-    b_ = dense::Tensor::zeros(DType::kFloat32, {out_channels});
+    b_ = dense::Tensor::zeros(DType::kFloat32, {out_channels_});
     auto fan = init::_calculate_fan_in_and_fan_out(W_);
     auto fan_in = std::get<0>(fan);
     auto bound = fan_in > 0 ? 1.0 / std::sqrt(fan_in) : 0;
     init::uniform_(b_, -bound, bound);
   }
 }
-
-Conv2d::~Conv2d() = default;
 
 dense::Tensor Conv2d::forward(const dense::Tensor &input) {
   // 输入形状： (N, C, H, W)

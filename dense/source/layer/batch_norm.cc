@@ -480,14 +480,16 @@ BatchNorm::BatchNorm(Context *ctx, const std::string &name,
   if (affine_ || track_running_stats_) {
     RegisterParam();
   }
+}
 
+void BatchNorm::init() {
   if (affine_) {
     W_ = Tensor::empty(DType::kFloat32, {num_features_});
     init::ones_(W_);
 
     b_ = Tensor::zeros(DType::kFloat32, {num_features_});
   }
-  if (track_running_stats) {
+  if (track_running_stats_) {
     // 均值为零, 方差为1
     running_mean_ = Tensor::zeros(DType::kFloat32, {num_features_});
 

@@ -14,6 +14,7 @@ public:
   ~Linear() override = default;
   const char *type() const override { return "linear"; }
 
+  void init() override;
   Tensor forward(const Tensor &input) override;
   Tensor backward(const Tensor &grad_output) override;
 

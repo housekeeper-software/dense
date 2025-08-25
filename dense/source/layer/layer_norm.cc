@@ -29,7 +29,9 @@ LayerNorm::LayerNorm(Context *ctx, const std::string &name,
     // 这个层有可学习参数,gamma ,beta
     RegisterParam();
   }
+}
 
+void LayerNorm::init() {
   if (elementwise_affine_) {
     // gamma 通常初始化为 1
     W_ = Tensor::empty(DType::kFloat32, normalized_shape_);

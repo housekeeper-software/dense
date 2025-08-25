@@ -28,6 +28,8 @@ public:
   ~BatchNorm() override = default;
   const char *type() const override { return "bn"; }
 
+  void init() override;
+
   Tensor forward(const Tensor &input) override;
   Tensor backward(const Tensor &grad_output) override;
 

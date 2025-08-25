@@ -12,13 +12,15 @@ Linear::Linear(Context *ctx, const std::string &name, int64_t in_features,
       has_bias_(has_bias) {
   // 线性层有可学习参数 W_,b_(if has_bias_=true)
   RegisterParam();
+}
 
+void Linear::init() {
   // torch::nn::Linear 的权重形状是 [out_features, in_features]
   // 权重和偏置初始化参考 pytorch nn.Linear
   W_ = Tensor::empty(DType::kFloat32, {out_features_, in_features_});
   init::kaiming_normal_(W_, std::sqrt(5), init::FanModeType::kFanIn,
                         init::NonlinearityType::kLeakyReLU);
-  if (has_bias) {
+  if (has_bias_) {
     b_ = Tensor::empty(DType::kFloat32, {out_features_});
 
     auto fan = init::_calculate_fan_in_and_fan_out(W_);

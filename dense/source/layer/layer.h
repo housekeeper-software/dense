@@ -54,6 +54,8 @@ public:
   std::string name() const { return name_; }
   bool is_training() const { return ctx_->training; }
 
+  virtual void init() {};
+
   virtual Tensor forward(const Tensor &input) = 0;
   virtual Tensor backward(const Tensor &grad_output) { return Tensor(); }
 
