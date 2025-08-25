@@ -113,6 +113,8 @@ void training() {
   model.AddLayer(std::move(flattened_layer));
   model.AddLayer(std::move(classifier));
 
+  model.init_for_traning();
+
   dense::CrossEntropyLoss loss;
   dense::AdamW optimizer(0.001);
   dense::CosineAnnealingWarmRestarts scheduler(optimizer.get_lr(), 10, 2, 1e-6);

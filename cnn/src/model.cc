@@ -9,6 +9,12 @@ void CnnModel::AddLayer(std::unique_ptr<dense::Layer> layer) {
   layers_.emplace_back(std::move(layer));
 }
 
+void CnnModel::init_for_traning() {
+  for (auto &i : ctx()->param_layers) {
+    i->init();
+  }
+}
+
 void CnnModel::from_pretrained(const std::string &filename) {
   if (!filename.empty()) {
     if (!dense::ModelParams::load(filename, &model_params_)) {

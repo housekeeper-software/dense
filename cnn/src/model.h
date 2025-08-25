@@ -14,6 +14,8 @@ public:
 
   void AddLayer(std::unique_ptr<dense::Layer> layer);
 
+  void init_for_traning();
+
   dense::Tensor forward(const dense::Tensor &input);
   dense::Tensor backward(const dense::Tensor &grad_output);
 
