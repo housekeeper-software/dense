@@ -93,7 +93,7 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
         std::make_unique<dense::MultiHeadAttention>(
             &ctx_, dense::make_layer_name("h_%d.attn", i), config_.n_heads,
             config_.emb_dim, config_.context_length, config_.qkv_bias,
-            config_.drop_rate, cache_.get(i)),
+            config_.drop_rate, true, cache_.get(i)),
         std::make_unique<dense::Dropout>(
             &ctx_, dense::make_layer_name("h_%d.attn.dropout", i),
             config_.drop_rate));
