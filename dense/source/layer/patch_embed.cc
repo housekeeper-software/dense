@@ -29,7 +29,7 @@ PatchEmbed::PatchEmbed(Context *ctx, const std::string &name,
 PatchEmbed::~PatchEmbed() = default;
 
 void PatchEmbed::init() {
-  W_ = Tensor::empty(DType::kFloat32, {1, 1, hidden_size_});
+  W_ = Tensor::empty(DType::kFloat32, {hidden_size_});
   init::normal_(W_);
 }
 
@@ -64,7 +64,7 @@ dense::Tensor PatchEmbed::forward(const dense::Tensor &input) {
   std::vector<int64_t> pos_data(B * T1);
   for (size_t b = 0; b < B; ++b) {
     for (size_t t = 0; t < T1; ++t) {
-      pos_data[b * T + t] = static_cast<int64_t>(t);
+      pos_data[b * T1 + t] = static_cast<int64_t>(t);
     }
   }
 
@@ -110,10 +110,10 @@ dense::Tensor PatchEmbed::backward(const dense::Tensor &grad_output) {
     auto grad_in_bt = grad_in_ptr + b * T1 * C;
 
     if (ctx()->device.is_blas()) {
-      vec::saxpy_blas(C, 1.0f, grad_out_ptr, 1, grad_w_ptr, 1);
+      vec::saxpy_blas(C, 1.0f, grad_out_bt, 1, grad_w_ptr, 1);
     } else {
       for (int64_t k = 0; k < C; ++k) {
-        grad_w_ptr[k] += grad_out_ptr[k];
+        grad_w_ptr[k] += grad_out_bt[k];
       }
     }
     grad_out_bt += C;
