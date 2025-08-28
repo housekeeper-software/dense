@@ -17,10 +17,27 @@ class PatchEmbed;
 class TokenSplit;
 } // namespace dense
 
+class ModelConfig {
+public:
+  ModelConfig();
+  ~ModelConfig();
+  ModelConfig(const ModelConfig &);
+  ModelConfig &operator=(const ModelConfig &);
+  bool InitFromFile(const std::string &config_file);
+  int64_t emb_dim;
+  int64_t n_heads;
+  int64_t n_layers;
+  float drop_rate;
+  bool qkv_bias;
+  float expansion_ratio;
+  float ln_epsilon;
+  float initializer_range;
+};
+
 class VitModel {
 public:
-  VitModel(int64_t hidden_size, int64_t image_size, int64_t patch_size,
-           int64_t num_channels);
+  VitModel(const ModelConfig &config, int64_t image_size, int64_t patch_size,
+           int64_t num_channels, int64_t num_classes);
   ~VitModel();
 
   dense::Context *ctx();
@@ -46,13 +63,13 @@ private:
                               const std::string &name,
                               const dense::Tensor &tensor);
 
+  ModelConfig config_;
+
   std::unique_ptr<dense::PatchEmbed> patch_embed_;
 
   std::unique_ptr<dense::Dropout> dropout_;
 
   std::vector<std::unique_ptr<dense::Sequential>> blocks_;
-
-  int64_t num_patches_;
 
   // 最终的 LayerNorm
   std::unique_ptr<dense::LayerNorm> ln_f_;

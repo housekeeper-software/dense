@@ -27,11 +27,12 @@ struct TrainingArguments {
   int eval_interval;
   int patience;
   double min_delta;
+  bool use_image_transform;
 
   TrainingArguments()
       : epochs(0), accumulation_steps(1), max_grad_norm(std::nullopt),
         eval_interval(1), patience(kDefaultPatience),
-        min_delta(kDefaultMinDelta) {}
+        min_delta(kDefaultMinDelta), use_image_transform(false) {}
 };
 
 std::map<std::string, std::vector<double>>
