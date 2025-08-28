@@ -52,12 +52,12 @@ void split_qkv(const dense::Tensor &A, dense::Tensor &q, dense::Tensor &k,
 
 MultiHeadAttention::MultiHeadAttention(Context *ctx, const std::string &name,
                                        int64_t n_heads, int64_t emb_dim,
-                                       int64_t context_length, bool bias,
-                                       float drop_rate, bool use_attn_mask,
+                                       bool bias, float drop_rate,
+                                       const Tensor &attn_mask,
                                        std::shared_ptr<LayerCache> cache)
     : Layer(ctx, name), head_dim_(0), n_heads_(n_heads), emb_dim_(emb_dim),
-      context_length_(context_length), bias_(bias), drop_rate_(drop_rate),
-      cache_(cache), attn_scale_(0.0f) {
+      bias_(bias), drop_rate_(drop_rate), attn_mask_(attn_mask), cache_(cache),
+      attn_scale_(0.0f) {
   assert(emb_dim_ % n_heads_ == 0);
 
   // 每个头的维度
@@ -73,22 +73,6 @@ MultiHeadAttention::MultiHeadAttention(Context *ctx, const std::string &name,
   out_proj_ =
       std::make_unique<Linear>(ctx, make_layer_name("%s.c_proj", name.c_str()),
                                emb_dim_, emb_dim_, bias_);
-
-  if (use_attn_mask) {
-    attn_mask_ =
-        Tensor::zeros(DType::kInt8, {context_length_, context_length_});
-    // 生成一个上三角掩码矩阵
-    // 1 的地方需要掩码，就是将注意力矩阵的对应位置元素设置为 -inf
-    // 这样经过 softmax 之后，这些位置都变成了 0
-    auto ptr = attn_mask_.mutable_data_as<int8_t>();
-    auto M = attn_mask_.size(0);
-    auto N = attn_mask_.size(1);
-    for (size_t m = 0; m < M; ++m) {
-      for (size_t n = m + 1; n < N; ++n) {
-        ptr[m * N + n] = 1;
-      }
-    }
-  }
 }
 
 MultiHeadAttention::~MultiHeadAttention() = default;

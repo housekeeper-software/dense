@@ -24,8 +24,8 @@ public:
 class MultiHeadAttention : public Layer {
 public:
   MultiHeadAttention(Context *ctx, const std::string &name, int64_t n_heads,
-                     int64_t emb_dim, int64_t context_length, bool bias,
-                     float drop_rate, bool use_attn_mask = true,
+                     int64_t emb_dim, bool bias, float drop_rate,
+                     const Tensor &attn_mask = Tensor(),
                      std::shared_ptr<LayerCache> cache = nullptr);
   ~MultiHeadAttention() override;
   const char *type() const override { return "mha"; }
@@ -52,12 +52,11 @@ private:
 
   std::shared_ptr<LayerCache> cache_;
 
-  int64_t head_dim_;       // 每个头的维度
-  int64_t n_heads_;        // 头的个数
-  int64_t emb_dim_;        // 嵌入维度
-  int64_t context_length_; // 最大上下文长度
-  bool bias_;              // 投影层是否使用偏置
-  float drop_rate_;        // 注意力 dropout
+  int64_t head_dim_; // 每个头的维度
+  int64_t n_heads_;  // 头的个数
+  int64_t emb_dim_;  // 嵌入维度
+  bool bias_;        // 投影层是否使用偏置
+  float drop_rate_;  // 注意力 dropout
 
   float attn_scale_; // 缩放因子，用于缩放注意力分数
 
