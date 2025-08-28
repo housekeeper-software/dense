@@ -161,7 +161,68 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
   return result;
 }
 
-void VitModel::_load_weights() {}
+void VitModel::_load_weights() {
+  auto params = model_params_.tensors;
+
+  {
+    auto wpe = ctx_.GetLayer("path_embed.wpe");
+    wpe->W_ = CreateTensor(params.at("path_embed.wpe.weight"));
+    auto conv2d = ctx_.GetLayer("patch_embed.conv2d");
+    conv2d->W_ = CreateTensor(params.at("path_embed.conv2d.weight"));
+    conv2d->b_ = CreateTensor(params.at("path_embed.conv2d.bias"));
+    patch_embed_->W_ = CreateTensor(params.at("path_embed.weight"));
+  }
+
+  for (size_t i = 0; i < blocks_.size(); ++i) {
+    auto &block = blocks_[i];
+    std::string prefix = "h." + std::to_string(i) + ".";
+    {
+      // 第一个 LayerNorma 层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.ln_1", i));
+      layer->W_ = CreateTensor(params.at(prefix + "ln_1.weight")); // gamma
+      layer->b_ = CreateTensor(params.at(prefix + "ln_1.bias"));   // beta
+    }
+    {
+      // 多头注意力的前面线性层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.attn.c_attn", i));
+      layer->W_ = CreateTensor(params.at(prefix + "attn.c_attn.weight"))
+                      .transpose(0, 1);
+      layer->b_ = CreateTensor(params.at(prefix + "attn.c_attn.bias"));
+    }
+    {
+      // 多头注意力的末尾线性层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.attn.c_proj", i));
+      layer->W_ = CreateTensor(params.at(prefix + "attn.c_proj.weight"))
+                      .transpose(0, 1);
+      layer->b_ = CreateTensor(params.at(prefix + "attn.c_proj.bias"));
+    }
+
+    {
+      // 第二个 LayerNorm 层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.ln_2", i));
+      layer->W_ = CreateTensor(params.at(prefix + "ln_2.weight"));
+      layer->b_ = CreateTensor(params.at(prefix + "ln_2.bias"));
+    }
+
+    {
+      // MLP 的第一个线性层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.mlp.c_fc", i));
+      layer->W_ =
+          CreateTensor(params.at(prefix + "mlp.c_fc.weight")).transpose(0, 1);
+      layer->b_ = CreateTensor(params.at(prefix + "mlp.c_fc.bias"));
+    }
+    {
+      // MLP 的第二个线性层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.mlp.c_proj", i));
+      layer->W_ =
+          CreateTensor(params.at(prefix + "mlp.c_proj.weight")).transpose(0, 1);
+      layer->b_ = CreateTensor(params.at(prefix + "mlp.c_proj.bias"));
+    }
+  }
+  ln_f_->W_ = CreateTensor(params.at("ln_f.weight"));
+  ln_f_->b_ = CreateTensor(params.at("ln_f.bias"));
+  lm_head_->W_ = CreateTensor(params.at("lm_head.weight"));
+}
 
 size_t VitModel::_write_tensor(dense::ModelParams &model_params,
                                const std::string &name,
@@ -195,7 +256,84 @@ void VitModel::get_params_and_grads(
   }
 }
 
-void VitModel::save(const std::string &filename) {}
+void VitModel::save(const std::string &filename) {
+  dense::ModelParams model_params;
+  model_params.meta_data = model_params_.meta_data;
+  size_t total_size = 0;
+  {
+    auto wpe = ctx_.GetLayer("path_embed.wpe");
+    total_size += _write_tensor(model_params, "path_embed.wpe.weight", wpe->W_);
+
+    auto conv2d = ctx_.GetLayer("patch_embed.conv2d");
+    total_size +=
+        _write_tensor(model_params, "path_embed.conv2d.weight", conv2d->W_);
+    total_size +=
+        _write_tensor(model_params, "path_embed.conv2d.bias", conv2d->b_);
+
+    total_size +=
+        _write_tensor(model_params, "path_embed.weight", patch_embed_->W_);
+  }
+
+  for (size_t i = 0; i < blocks_.size(); ++i) {
+    auto &block = blocks_[i];
+    std::string prefix = "h." + std::to_string(i) + ".";
+    {
+      // 第一个 LayerNorm 层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.ln_1", i));
+      total_size +=
+          _write_tensor(model_params, prefix + "ln_1.weight", layer->W_);
+      total_size +=
+          _write_tensor(model_params, prefix + "ln_1.bias", layer->b_);
+    }
+    {
+      // 多头注意力的起始线性层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.attn.c_attn", i));
+      total_size += _write_tensor(model_params, prefix + "attn.c_attn.weight",
+                                  layer->W_.clone().transpose(0, 1));
+      total_size +=
+          _write_tensor(model_params, prefix + "attn.c_attn.bias", layer->b_);
+    }
+
+    {
+      // 多头注意力后面的投影层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.attn.c_proj", i));
+      total_size += _write_tensor(model_params, prefix + "attn.c_proj.weight",
+                                  layer->W_.clone().transpose(0, 1));
+      total_size +=
+          _write_tensor(model_params, prefix + "attn.c_proj.bias", layer->b_);
+    }
+    {
+      // 第二个 LayerNorm 层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.ln_2", i));
+      total_size +=
+          _write_tensor(model_params, prefix + "ln_2.weight", layer->W_);
+      total_size +=
+          _write_tensor(model_params, prefix + "ln_2.bias", layer->b_);
+    }
+    {
+      // MLP 的第一个线性层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.mlp.c_fc", i));
+      total_size += _write_tensor(model_params, prefix + "mlp.c_fc.weight",
+                                  layer->W_.clone().transpose(0, 1));
+      total_size +=
+          _write_tensor(model_params, prefix + "mlp.c_fc.bias", layer->b_);
+    }
+    {
+      // MLP 第二个投影层
+      auto layer = ctx_.GetLayer(dense::make_layer_name("h_%d.mlp.c_proj", i));
+      total_size += _write_tensor(model_params, prefix + "mlp.c_proj.weight",
+                                  layer->W_.clone().transpose(0, 1));
+      total_size +=
+          _write_tensor(model_params, prefix + "mlp.c_proj.bias", layer->b_);
+    }
+  }
+  total_size += _write_tensor(model_params, "ln_f.weight", ln_f_->W_);
+  total_size += _write_tensor(model_params, "ln_f.bias", ln_f_->b_);
+  total_size += _write_tensor(model_params, "lm_head.weight", lm_head_->W_);
+
+  std::cout << "模型参数总大小: " << total_size << " bytes" << std::endl;
+  model_params.save(filename);
+}
 
 void VitModel::enable_training(bool enable) { ctx_.training = enable; }
 
