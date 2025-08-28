@@ -10,6 +10,9 @@ class Conv2d;
 class Flatten;
 class Embedding;
 
+// PatchEmbed是Vision Transformer
+// (ViT)中的核心组件，负责将图像转换为序列化的token表示
+
 class PatchEmbed : public Layer {
 public:
   PatchEmbed(Context *ctx, const std::string &name, int64_t hidden_size,

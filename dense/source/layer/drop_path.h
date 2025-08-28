@@ -5,6 +5,23 @@
 
 namespace dense {
 
+/*
+Stochastic Depth
+是一种正则化技术，主要用于深度神经网络，特别是在Vision
+Transformer和ResNet等架构中
+
+适合使用DropPath的场景：
+1. 深度网络（>20层）
+2. 残差连接架构（ResNet, DenseNet）
+3. Transformer架构（ViT, BERT等）
+4. 训练时间较长的大模型
+5. 容易过拟合的任务
+
+- 小模型：max_drop_prob = 0.1-0.2
+- 中等模型：max_drop_prob = 0.2-0.3
+- 大模型：max_drop_prob = 0.3-0.5
+*/
+
 class DropPath : public Layer {
 public:
   DropPath(Context *ctx, const std::string &name, float drop_prob = 0.0f);

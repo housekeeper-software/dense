@@ -24,6 +24,7 @@ Tensor DropPath::forward(const Tensor &input) {
   const auto B = input.size(0);
 
   drop_mask_ = dense::Tensor::empty(dense::DType::kFloat32, {B});
+
   float keep_prob = 1.0f - drop_prob_;
   float scale = 1.0f / keep_prob; // 缩放因子，补偿被丢弃的路径
 
@@ -60,7 +61,7 @@ Tensor DropPath::forward(const Tensor &input) {
 }
 
 Tensor DropPath::backward(const Tensor &grad_output) {
-  if (!is_training() || drop_prob_ == 0.0f) {
+  if (drop_prob_ == 0.0f) {
     return grad_output.clone();
   }
   // 如果drop_prob为1，返回全零梯度
@@ -69,7 +70,7 @@ Tensor DropPath::backward(const Tensor &grad_output) {
   }
 
   const auto B = grad_output.size(0);
-  auto grad_input = Tensor::empty(grad_output.dtype(), grad_output.sizes());
+  auto grad_input = Tensor::zeros_like(grad_output);
 
   auto grad_output_ptr = grad_output.const_data_as<float>();
   auto grad_input_ptr = grad_input.mutable_data_as<float>();

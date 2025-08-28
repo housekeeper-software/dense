@@ -267,7 +267,7 @@ void MultiHeadAttention::header_forward_native(const Tensor &q, const Tensor &k,
 
   // 在推理场景下，dropout 不生效
   // drop_output[T,total_seq_len]
-  if (attn_dropout_mask_.is_defined()) {
+  if (is_training() && attn_dropout_mask_.is_defined()) {
 
     auto mask_ptr = attn_dropout_mask_.const_data_as<float>() +
                     b * n_heads_ * T * total_seq_len + h * T * total_seq_len;
@@ -349,7 +349,7 @@ void MultiHeadAttention::header_forward_blas(const Tensor &q, const Tensor &k,
 
   // 在推理场景下，dropout 不生效
   // drop_output[T,total_seq_len]
-  if (attn_dropout_mask_.is_defined()) {
+  if (is_training() && attn_dropout_mask_.is_defined()) {
     auto mask_ptr = attn_dropout_mask_.const_data_as<float>() +
                     b * n_heads_ * T * total_seq_len + h * T * total_seq_len;
     vec::shdm_blas(att.numel(), att_ptr, mask_ptr, att_ptr);

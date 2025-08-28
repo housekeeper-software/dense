@@ -1,6 +1,5 @@
 #include "layer/patch_embed.h"
 #include "layer/conv2d.h"
-#include "layer/dropout.h"
 #include "layer/embedding.h"
 #include "layer/flatten.h"
 #include "layer/init.h"
@@ -9,18 +8,44 @@
 
 namespace dense {
 
+namespace {
+
+dense::Tensor transpose_optim(const dense::Tensor &x) {
+  const auto B = x.size(0);
+  const auto T = x.size(1);
+  const auto C = x.size(2);
+  const auto spatial_size = T * C;
+  auto output = Tensor::empty(x.dtype(), {B, C, T});
+
+  for (int64_t i = 0; i < B; ++i) {
+    auto src = x.const_data_as<float>() + i * spatial_size;
+    auto dst = output.mutable_data_as<float>() + i * spatial_size;
+    vec::transpose_2d_blas(T, C, src, dst);
+  }
+  return output;
+}
+
+} // namespace
+
 PatchEmbed::PatchEmbed(Context *ctx, const std::string &name,
                        int64_t hidden_size, int64_t image_size,
                        int64_t patch_size, int64_t num_channels, bool bias)
     : Layer(ctx, name), hidden_size_(hidden_size), image_size_(image_size),
       patch_size_(patch_size), num_channels_(num_channels), num_patches_(0) {
+  // 有一个可学习的参数，W_: cls_token 的嵌入向量
   RegisterParam();
+  // 将原始图像切分为多少个 patches ?
   num_patches_ = (image_size_ / patch_size_) * (image_size_ / patch_size_);
+  // 我们用Conv2d 实现图像切分，注意 zero-padding
   conv2d_ = std::make_unique<Conv2d>(
       ctx, make_layer_name("%s.conv2d", name.c_str()), num_channels_,
       hidden_size_, patch_size, patch_size, patch_size, patch_size, 0, 0, bias);
+
+  // 张量塑形
   flatten_ = std::make_unique<Flatten>(
       ctx, make_layer_name("%s.flatten", name.c_str()), 2, -1);
+
+  // 位置嵌入
   pos_embedding_ =
       std::make_unique<Embedding>(ctx, make_layer_name("%s.wpe", name.c_str()),
                                   num_patches_ + 1, hidden_size_);
@@ -34,19 +59,19 @@ void PatchEmbed::init() {
 }
 
 dense::Tensor PatchEmbed::forward(const dense::Tensor &input) {
-  // input [B, 1, 28,28]
+  // input [B, num_channels, image_size,image_size]
   auto x = conv2d_->forward(input);
-  // x [ B,768, 7,7]
+  // x [ B, hidden_size_, num_patches_/2, num_patches_/2]
   x = flatten_->forward(x);
-  // x [B,768,49]
-  x = x.transpose(1, 2);
-  // x [B,49,768]
+  // x [B, hidden_size_ , num_patches_]
+  x = transpose_optim(x); // x.transpose(1, 2);
+  // x [B, num_patches_ ,hidden_size_]
 
   const auto B = x.size(0);
-  const auto T = x.size(1);
+  const auto T = x.size(1); // num_patches_
   const auto C = x.size(2);
 
-  const auto T1 = T + 1;
+  const auto T1 = T + 1; // num_patches_ + 1，因为要添加 cls_token
 
   auto output = dense::Tensor::empty(x.dtype(), {B, T1, C});
 
@@ -54,25 +79,26 @@ dense::Tensor PatchEmbed::forward(const dense::Tensor &input) {
   auto out_ptr = output.mutable_data_as<float>();
 
   for (int64_t b = 0; b < B; ++b) {
-    auto x_bt = x.const_data_as<float>() + b * T * C;
+    auto x_bt = x_ptr + b * T * C;
     auto out_bt = out_ptr + b * T1 * C;
+    // 先将 cls_token 向量复制到批次的第一行
     vec::scopy_blas(C, W_.const_data_as<float>(), 1, out_bt, 1);
+    // 复制 patch tokens
     out_bt += C;
     vec::scopy_blas(T * C, x_bt, 1, out_bt, 1);
   }
 
-  std::vector<int64_t> pos_data(B * T1);
-  for (size_t b = 0; b < B; ++b) {
-    for (size_t t = 0; t < T1; ++t) {
-      pos_data[b * T1 + t] = static_cast<int64_t>(t);
+  auto pos = dense::Tensor::empty(dense::DType::kInt64, {B, T1});
+  auto pos_ptr = pos.mutable_data_as<int64_t>();
+  for (int64_t b = 0; b < B; ++b) {
+    for (int64_t t = 0; t < T1; ++t) {
+      pos_ptr[b * T1 + t] = t;
     }
   }
-
-  auto pos =
-      dense::Tensor::from_blob(dense::DType::kInt64, {B, T1}, &pos_data[0]);
   auto pos_emb = pos_embedding_->forward(pos);
 
   {
+    // output = token_emb + pos_emb
     auto N = output.numel();
     auto tok_ptr = output.mutable_data_as<float>();
     auto pos_ptr = pos_emb.const_data_as<float>();
@@ -100,7 +126,7 @@ dense::Tensor PatchEmbed::backward(const dense::Tensor &grad_output) {
   auto grad_w_ptr = grad_W_.mutable_data_as<float>();
   auto grad_out_ptr = grad_output.const_data_as<float>();
 
-  const auto T1 = T - 1;
+  const auto T1 = T - 1; // 去掉 cls_token
 
   auto grad_input = Tensor::empty(grad_output.dtype(), {B, T1, C});
   auto grad_in_ptr = grad_input.mutable_data_as<float>();
@@ -109,17 +135,21 @@ dense::Tensor PatchEmbed::backward(const dense::Tensor &grad_output) {
     auto grad_out_bt = grad_out_ptr + b * T * C;
     auto grad_in_bt = grad_in_ptr + b * T1 * C;
 
+    // 第一行复制给 cls_token 梯度
     if (ctx()->device.is_blas()) {
+      // y:=αx+y
       vec::saxpy_blas(C, 1.0f, grad_out_bt, 1, grad_w_ptr, 1);
     } else {
       for (int64_t k = 0; k < C; ++k) {
         grad_w_ptr[k] += grad_out_bt[k];
       }
     }
+    // 复制 patch token 梯度
     grad_out_bt += C;
     vec::scopy_blas(T1 * C, grad_out_bt, 1, grad_in_bt, 1);
   }
-  grad_input = grad_input.transpose(1, 2);
+  // 转置
+  grad_input = transpose_optim(grad_input); // grad_input.transpose(1, 2);
   grad_input = flatten_->backward(grad_input);
   return conv2d_->backward(grad_input);
 }

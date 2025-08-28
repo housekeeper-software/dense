@@ -104,7 +104,7 @@ dense::Tensor Embedding::backward(const dense::Tensor &grad_output) {
     if (ctx()->device.is_blas()) {
       vec::saxpy_blas(embedding_dim_, 1.0f, grad_out_ptr, 1, grad_w_idx_ptr, 1);
     } else {
-      for (int64_t k = 0; k < num_embeddings_; ++k) {
+      for (int64_t k = 0; k < embedding_dim_; ++k) {
         // 因为输入中可能包含多个相同的子词，所以要累加!!!
         grad_w_idx_ptr[k] += grad_out_ptr[k];
       }

@@ -14,6 +14,7 @@ Tensor TokenSplit::forward(const Tensor &input) {
   auto output = dense::Tensor::empty(input.dtype(), {B, C});
   auto out_ptr = output.mutable_data_as<float>();
   auto logits_ptr = input.const_data_as<float>();
+
   for (int64_t b = 0; b < B; ++b) {
     auto out_bt = out_ptr + b * C;
     auto logits_bt = logits_ptr + b * T * C;
@@ -27,6 +28,7 @@ Tensor TokenSplit::backward(const Tensor &grad_output) {
   const auto B = grad_input.size(0);
   const auto T = grad_input.size(1);
   const auto C = grad_input.size(2);
+  
   for (int64_t b = 0; b < B; ++b) {
     auto grad_out_bt = grad_output.const_data_as<float>() + b * C;
     auto grad_in_bt = grad_input.mutable_data_as<float>() + b * T * C;
