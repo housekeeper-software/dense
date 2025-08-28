@@ -77,7 +77,7 @@ VitModel::VitModel(const ModelConfig &config, int64_t image_size,
   std::vector<int64_t> normalized_shape = {config_.emb_dim};
   auto out_dim =
       static_cast<int64_t>(config_.expansion_ratio * config_.emb_dim);
-      
+
   // 创建 n_layers 个 Block 实例
   for (size_t i = 0; i < config_.n_layers; ++i) {
 
@@ -104,7 +104,7 @@ VitModel::VitModel(const ModelConfig &config, int64_t image_size,
             config_.ln_epsilon, true, true),
         std::make_unique<dense::MultiHeadAttention>(
             &ctx_, dense::make_layer_name("h_%d.attn", i), config_.n_heads,
-            config_.emb_dim, num_patches + 1, true, config_.drop_rate, false),
+            config_.emb_dim, true, config_.drop_rate),
         std::make_unique<dense::DropPath>(
             &ctx_, dense::make_layer_name("h_%d.attn.dropout", i),
             config_.drop_rate));
