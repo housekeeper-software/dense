@@ -88,7 +88,6 @@ void saxpby_blas(int N, float alpha, const float *x, int incx, float beta,
   cblas_saxpby(N, alpha, x, incx, beta, y, incy);
 }
 
-
 void sgemv_blas(int M, int N, float alpha, const float *a, int lda,
                 const float *x, int incx, float beta, float *y, int incy) {
   cblas_sgemv(CblasRowMajor, CblasNoTrans, M, N, alpha, a, lda, x, incx, beta,
@@ -202,6 +201,10 @@ void mat_softmax_backward_blas(float *dout, const float *inp, const float *din,
     saxpy_blas(N, -sum, ones.data(), 1, temp.data(), 1);
     shdm_blas(N, inp_bt, temp.data(), dout_bt);
   }
+}
+
+void transpose_2d_blas(int m, int n, const float *A, float *B) {
+  cblas_somatcopy(CblasRowMajor, CblasTrans, m, n, 1.0f, A, n, B, m);
 }
 
 } // namespace vec

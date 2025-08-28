@@ -6,6 +6,7 @@
 namespace dense {
 
 /*
+https://github.com/huggingface/pytorch-image-models/blob/main/timm/layers/drop.py
 Stochastic Depth
 是一种正则化技术，主要用于深度神经网络，特别是在Vision
 Transformer和ResNet等架构中

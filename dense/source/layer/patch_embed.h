@@ -27,6 +27,8 @@ public:
   Tensor forward(const Tensor &input) override;
   Tensor backward(const Tensor &grad_output) override;
 
+  int64_t num_patches() const { return num_patches_; }
+
 private:
   int64_t hidden_size_;
   int64_t image_size_;

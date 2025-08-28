@@ -112,6 +112,8 @@ void sexp_blas(int n, const float *x, float *y);
 void shdm_native(int n, const float *a, const float *b, float *result);
 void shdm_blas(int n, const float *a, const float *b, float *result);
 
+void transpose_2d_blas(int m, int n, const float *A, float *B);
+
 } // namespace vec
 
 #endif // MATH_VEC_MATH_H_
