@@ -10,10 +10,10 @@
 #include <iomanip>
 #include <iostream>
 
-const std::string kDataDir = "C:/dev/llm/c/gpt/gpt-2/data";
+const std::string kDataDir = "C:/dev/llm/dataset/gpt2";
 
-const std::string model_dir = "C:/dev/llm/c/gpt/gpt-2/data/gpt2-small/";
-const std::string save_model_dir = "C:/dev/llm/c/gpt_dev/model";
+const std::string model_dir = "C:/dev/llm/dataset/gpt2/gpt2-small/";
+const std::string save_model_dir = "C:/dev/llm/c/gpt2/dense/model";
 const char kVocabFile[] = "vocab.json";
 const char kMergesFile[] = "merges.txt";
 const char kModelFile[] = "model.safetensors";

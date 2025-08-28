@@ -59,6 +59,22 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
   cache_.set_enabled(enable_cache);
   ctx_.device = dense::Device(dense::DeviceType::BLAS);
 
+  auto attn_mask = dense::Tensor::zeros(
+      dense::DType::kInt8, {config_.context_length, config_.context_length});
+  {
+    // 生成一个上三角掩码矩阵
+    // 1 的地方需要掩码，就是将注意力矩阵的对应位置元素设置为 -inf
+    // 这样经过 softmax 之后，这些位置都变成了 0
+    auto ptr = attn_mask.mutable_data_as<int8_t>();
+    auto M = attn_mask.size(0);
+    auto N = attn_mask.size(1);
+    for (size_t m = 0; m < M; ++m) {
+      for (size_t n = m + 1; n < N; ++n) {
+        ptr[m * N + n] = 1;
+      }
+    }
+  }
+
   wte_ = std::make_unique<dense::Embedding>(
       &ctx_, "wte.weight", config_.vocab_size, config_.emb_dim, 50256);
   wpe_ = std::make_unique<dense::Embedding>(
@@ -95,8 +111,8 @@ GPTModel::GPTModel(const ModelConfig &config, bool enable_cache)
             config_.ln_epsilon, true, config_.qkv_bias),
         std::make_unique<dense::MultiHeadAttention>(
             &ctx_, dense::make_layer_name("h_%d.attn", i), config_.n_heads,
-            config_.emb_dim, config_.context_length, config_.qkv_bias,
-            config_.drop_rate, true, cache_.get(i)),
+            config_.emb_dim, config_.qkv_bias, config_.drop_rate, attn_mask,
+            cache_.get(i)),
         std::make_unique<dense::Dropout>(
             &ctx_, dense::make_layer_name("h_%d.attn.dropout", i),
             config_.drop_rate));
