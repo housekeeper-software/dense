@@ -310,7 +310,7 @@ void VitModel::save(const std::string &filename) {
   size_t total_size = 0;
   {
     auto wpe = ctx_.GetLayer("patch_embed.wpe");
-    total_size += _write_tensor(model_params, "path_embed.wpe.weight", wpe->W_);
+    total_size += _write_tensor(model_params, "patch_embed.wpe.weight", wpe->W_);
 
     auto conv2d = ctx_.GetLayer("patch_embed.conv2d");
     total_size +=
