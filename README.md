@@ -1,17 +1,26 @@
-# dense
-A C++ deep learning library for learning
+# Dense — Windows Calculator (C# WinForms)
 
-## cnn
-演示 cnn 训练 mnist
+这是一个最小可运行的 Windows 计算器示例（C#，WinForms），包含：
+- 基本四则运算（+ - * /）和幂运算（^）
+- 小数、括号优先级
+- 常见初等函数：sin, cos, tan, log, exp, sqrt
+- 常数：pi, e
+- 简单的界面与历史记录
 
-## gpt2
-演示 gpt2 的训练和推理
+构建与运行
+1. 需要 .NET 6 SDK（或更高）并确保支持 Windows 桌面。
+2. 在项目目录下运行：
+   - dotnet build
+   - dotnet run
 
-## vit
-演示 Vision Transformer 的一个 tiny 版本的训练 
+发布为单文件可执行（示例 x64）：
+- dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o publish
 
-## dense
-一些基于 C++ 的网络层和张量的实现，有些地方支持 cblas 加速，但整体效率不高
+测试
+- 我提供了一个简单 xUnit 测试示例（可选），可用 `dotnet test` 运行。
 
-## doc
-一些常见的网络层的前向计算公式，以及反向传播公式推导过程，不是很严谨，基本正确
+后续改进建议（对应 issues）
+- 更完善的 UI（主题、键盘映射改进）
+- 表达式历史持久化
+- 更严格的解析器与错误消息本地化
+- 生成安装程序（Inno Setup / WiX / MSIX)
